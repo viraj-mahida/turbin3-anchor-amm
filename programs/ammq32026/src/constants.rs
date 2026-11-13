@@ -1,10 +1,17 @@
 use anchor_lang::prelude::*;
 
 #[constant]
-pub const COUNTER_SEED: &[u8] = b"counter";
+pub const CONFIG_SEED: &[u8] = b"config";
 
 #[constant]
-pub const HELLO_WORLD_LAMPORTS: u64 = 1;
+pub const LP_SEED: &[u8] = b"lp";
 
 #[constant]
-pub const MAX_COUNT: u64 = 10;
+pub const TREASURY_SEED: &[u8] = b"treasury";
+
+// 100% in basis points
+#[constant]
+pub const MAX_BPS: u16 = 10_000;
+
+// precision used by the curve library for the deposit / withdraw ratios
+pub const PRECISION: u32 = 6;

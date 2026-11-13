@@ -4,7 +4,11 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-use crate::state::Config;
+use crate::{
+    constants::{CONFIG_SEED, LP_SEED, MAX_BPS, TREASURY_SEED},
+    error::AmmError,
+    state::Config,
+};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
@@ -16,7 +20,7 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = initializer,
-        seeds = [b"lp", config.key.as_ref()],
+        seeds = [LP_SEED, config.key().as_ref()],
         bump,
         mint::decimals = 6,
         mint::authority = config,
@@ -28,18 +32,37 @@ pub struct Initialize<'info> {
         associated_token::mint = mint_x,
         associated_token::authority = config,
     )]
-    pub vault_x: Account<'info, TokenAccount>,
+    pub vault_x: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         payer = initializer,
         associated_token::mint = mint_y,
         associated_token::authority = config,
     )]
-    pub vault_y: Account<'info, TokenAccount>,
+    pub vault_y: Box<Account<'info, TokenAccount>>,
+    #[account(
+        seeds = [TREASURY_SEED, config.key().as_ref()],
+        bump,
+    )]
+    pub treasury: SystemAccount<'info>,
     #[account(
         init,
         payer = initializer,
-        seeds = [b"config", seed.to_le_bytes().as_ref()],
+        associated_token::mint = mint_x,
+        associated_token::authority = treasury,
+    )]
+    pub treasury_x: Box<Account<'info, TokenAccount>>,
+    #[account(
+        init,
+        payer = initializer,
+        associated_token::mint = mint_y,
+        associated_token::authority = treasury,
+    )]
+    pub treasury_y: Box<Account<'info, TokenAccount>>,
+    #[account(
+        init,
+        payer = initializer,
+        seeds = [CONFIG_SEED, seed.to_le_bytes().as_ref()],
         bump,
         space = Config::DISCRIMINATOR.len() + Config::INIT_SPACE,
     )]
@@ -54,18 +77,25 @@ impl<'info> Initialize<'info> {
         &mut self,
         seed: u64,
         fee: u16,
+        treasury_share: u16,
         authority: Option<Pubkey>,
         bumps: InitializeBumps,
     ) -> Result<()> {
+        require!(fee <= MAX_BPS, AmmError::InvalidFee);
+        require!(treasury_share <= MAX_BPS, AmmError::InvalidFee);
+        require_keys_neq!(self.mint_x.key(), self.mint_y.key(), AmmError::InvalidToken);
+
         self.config.set_inner(Config {
             seed,
             authority,
             mint_x: self.mint_x.key(),
             mint_y: self.mint_y.key(),
             fee,
+            treasury_share,
             locked: false,
             config_bump: bumps.config,
             lp_bump: bumps.mint_lp,
+            treasury_bump: bumps.treasury,
         });
 
         Ok(())

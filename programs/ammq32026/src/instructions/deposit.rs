@@ -5,7 +5,11 @@ use anchor_spl::{
 };
 use constant_product_curve::ConstantProduct;
 
-use crate::{error::AmmError, state::Config};
+use crate::{
+    constants::{CONFIG_SEED, LP_SEED, PRECISION},
+    error::AmmError,
+    state::Config,
+};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -16,13 +20,13 @@ pub struct Deposit<'info> {
     #[account(
         has_one = mint_x,
         has_one = mint_y,
-        seeds = [b"config", config.seed.to_le_bytes().as_ref()],
+        seeds = [CONFIG_SEED, config.seed.to_le_bytes().as_ref()],
         bump = config.config_bump,
     )]
     pub config: Account<'info, Config>,
     #[account(
         mut,
-        seeds = [b"lp", config.key().as_ref()],
+        seeds = [LP_SEED, config.key().as_ref()],
         bump = config.lp_bump,
     )]
     pub mint_lp: Account<'info, Mint>,
@@ -75,6 +79,8 @@ impl<'info> Deposit<'info> {
 
         let (x, y) =
             if self.mint_lp.supply == 0 && self.vault_x.amount == 0 && self.vault_y.amount == 0 {
+                // first deposit sets the price, so both sides have to be there
+                require!(max_x > 0 && max_y > 0, AmmError::InvalidAmount);
                 (max_x, max_y)
             } else {
                 let amounts = ConstantProduct::xy_deposit_amounts_from_l(
@@ -82,9 +88,9 @@ impl<'info> Deposit<'info> {
                     self.vault_y.amount,
                     self.mint_lp.supply,
                     amount,
-                    6,
+                    PRECISION,
                 )
-                .unwrap();
+                .map_err(AmmError::from)?;
 
                 require!(
                     amounts.x <= max_x && amounts.y <= max_y,
@@ -136,7 +142,7 @@ impl<'info> Deposit<'info> {
         };
 
         let signer_seeds: &[&[&[u8]]] = &[&[
-            b"config",
+            CONFIG_SEED,
             &self.config.seed.to_le_bytes(),
             &[self.config.config_bump],
         ]];

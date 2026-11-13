@@ -7,13 +7,13 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-ammq32026 = "4XadfZBdH5iRQ9fVHrffKaxyAseU2j7V5BB3v1oxNru2"
+ammq32026 = "wwPRtu5gM4m9GWbEkyvvP2E2Zhwfhe2wC7gVm7zTCrT"
 
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "cargo test"
+test = "cargo build-sbf --arch v0 && cargo test"
 
 [hooks]
