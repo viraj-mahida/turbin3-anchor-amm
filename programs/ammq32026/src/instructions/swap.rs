@@ -6,7 +6,7 @@ use anchor_spl::{
 use constant_product_curve::{ConstantProduct, LiquidityPair};
 
 use crate::{
-    constants::{CONFIG_SEED, MAX_BPS, PRECISION, TREASURY_SEED},
+    constants::{CONFIG_SEED, MAX_BPS, TREASURY_SEED},
     error::AmmError,
     state::Config,
 };
@@ -92,7 +92,7 @@ impl<'info> Swap<'info> {
             self.vault_y.amount,
             0,
             self.config.fee,
-            Some(PRECISION as u8),
+            None,
         )
         .map_err(AmmError::from)?;
 
@@ -103,9 +103,7 @@ impl<'info> Swap<'info> {
         };
 
         // The curve takes the fee out of amount_in before pricing the swap
-        let result = curve
-            .swap_unsafe(pair, amount_in)
-            .map_err(AmmError::from)?;
+        let result = curve.swap_unsafe(pair, amount_in).map_err(AmmError::from)?;
 
         require_neq!(result.withdraw, 0, AmmError::InvalidAmount);
         require!(result.withdraw >= min_out, AmmError::SlippageExceeded);

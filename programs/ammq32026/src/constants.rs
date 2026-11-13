@@ -13,5 +13,6 @@ pub const TREASURY_SEED: &[u8] = b"treasury";
 #[constant]
 pub const MAX_BPS: u16 = 10_000;
 
-// precision used by the curve library for the deposit / withdraw ratios
-pub const PRECISION: u32 = 6;
+// Scale the curve library uses for the deposit / withdraw ratios. It is the
+// multiplier itself (1e6), not the number of decimals
+pub const PRECISION: u32 = 1_000_000;
